@@ -3,186 +3,188 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Visiting Card Manager</title>
+  <title>Visiting Card Organizer</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- ✅ Stable OCR version -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+<body class="bg-gray-100 min-h-screen p-6">
+  <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-6">
+    <h1 class="text-3xl font-bold text-center mb-6 text-blue-700">📇 Visiting Card Organizer</h1>
 
-  <!-- Login Section -->
-  <div id="login-section" class="bg-white shadow-md rounded-xl p-6 w-full max-w-sm">
-    <h2 class="text-2xl font-bold mb-4 text-center">Admin Login</h2>
-    <input id="login-user" type="text" placeholder="Username" class="border p-2 w-full mb-3 rounded" />
-    <input id="login-pass" type="password" placeholder="Password" class="border p-2 w-full mb-4 rounded" />
-    <button id="btn-login" class="bg-blue-600 text-white px-4 py-2 rounded w-full hover:bg-blue-700">Login</button>
-    <p id="login-status" class="text-center text-red-500 mt-2"></p>
-  </div>
+    <!-- Upload + OCR Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="border p-4 rounded-xl bg-gray-50 flex flex-col items-center justify-center">
+        <input type="file" id="imageInput" accept="image/*" class="hidden" />
+        <label for="imageInput" class="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 transition">Upload Card Image</label>
+        <img id="preview" class="mt-4 w-64 rounded-xl shadow-md hidden" />
+        <button id="extractBtn" class="mt-4 bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition hidden">Extract Text</button>
+        <p id="ocrStatus" class="text-gray-500 mt-2 text-sm"></p>
+      </div>
 
-  <!-- Dashboard Section -->
-  <div id="dashboard" class="hidden w-full max-w-3xl">
-    <h2 class="text-2xl font-bold text-center mb-4">Visiting Card Dashboard</h2>
+      <!-- Editable Fields -->
+      <div class="space-y-3">
+        <input type="text" id="name" placeholder="Name" class="w-full border rounded-xl p-2 focus:ring-2 focus:ring-blue-500" />
+        <input type="email" id="email" placeholder="Email" class="w-full border rounded-xl p-2 focus:ring-2 focus:ring-blue-500" />
+        <input type="text" id="phone" placeholder="Phone" class="w-full border rounded-xl p-2 focus:ring-2 focus:ring-blue-500" />
+        <input type="text" id="company" placeholder="Company" class="w-full border rounded-xl p-2 focus:ring-2 focus:ring-blue-500" />
+        <textarea id="address" placeholder="Address" rows="3" class="w-full border rounded-xl p-2 focus:ring-2 focus:ring-blue-500"></textarea>
 
-    <!-- Upload Form -->
-    <div class="bg-white shadow-md rounded-xl p-4 mb-6">
-      <input type="file" id="file-input" accept="image/*" class="mb-3" />
-      <button id="btn-run-ocr" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Run OCR</button>
-      <p id="ocr-status" class="text-blue-600 text-sm mt-2"></p>
-
-      <div id="preview" class="mt-4 hidden">
-        <img id="card-image" class="w-48 rounded shadow mb-3" />
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input id="field-name" placeholder="Name" class="border p-2 rounded" />
-          <input id="field-email" placeholder="Email" class="border p-2 rounded" />
-          <input id="field-phone" placeholder="Phone" class="border p-2 rounded" />
-          <input id="field-company" placeholder="Company" class="border p-2 rounded" />
-          <textarea id="field-address" placeholder="Address" class="border p-2 rounded col-span-2"></textarea>
-        </div>
-        <button id="btn-save" class="bg-green-600 text-white px-4 py-2 mt-4 rounded hover:bg-green-700">Save Card</button>
-        <p id="save-status" class="mt-2 text-sm"></p>
+        <button id="saveBtn" class="w-full bg-blue-700 text-white py-2 rounded-xl hover:bg-blue-800 transition">Save to Google Sheet</button>
+        <p id="uploadStatus" class="text-center text-sm text-gray-600 mt-2"></p>
       </div>
     </div>
 
-    <!-- Saved Cards -->
-    <div class="bg-white shadow-md rounded-xl p-4">
-      <h3 class="text-xl font-semibold mb-3">Saved Cards</h3>
-      <div id="card-list" class="grid gap-4"></div>
+    <!-- Divider -->
+    <hr class="my-6" />
+
+    <!-- Card List Section -->
+    <div>
+      <h2 class="text-2xl font-semibold mb-4">Saved Visiting Cards</h2>
+      <div class="flex justify-between mb-3">
+        <input type="text" id="searchInput" placeholder="🔍 Search by name, company, or phone" class="border p-2 rounded-xl w-2/3 focus:ring-2 focus:ring-blue-500" />
+        <button id="refreshBtn" class="bg-gray-700 text-white px-4 py-2 rounded-xl hover:bg-gray-800">🔄 Refresh</button>
+      </div>
+      <div id="cardsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
     </div>
   </div>
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwHj3POZOqg1TW9qB6piizcgXhZPWtjkqWWqefnF422KoniNS_XE0ThhmQW6ftjmOAHdg/exec"; // Replace with your Apps Script Web App URL
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzcICOs01nL_to5RjlqP_RFL_OKmecTW57WEDS3c3Y6zXNM-KIA-6j2yqZoTpPyYIrCVw/exec';
+    let selectedFile = null;
+    const imageInput = document.getElementById('imageInput');
+    const preview = document.getElementById('preview');
+    const extractBtn = document.getElementById('extractBtn');
+    const ocrStatus = document.getElementById('ocrStatus');
+    const saveBtn = document.getElementById('saveBtn');
+    const uploadStatus = document.getElementById('uploadStatus');
+    const cardsContainer = document.getElementById('cardsContainer');
+    const searchInput = document.getElementById('searchInput');
 
-    // ------------------ LOGIN ------------------
-    document.getElementById("btn-login").addEventListener("click", () => {
-      const user = document.getElementById("login-user").value.trim();
-      const pass = document.getElementById("login-pass").value.trim();
-      if (user === "Admin" && pass === "admin123") {
-        document.getElementById("login-section").classList.add("hidden");
-        document.getElementById("dashboard").classList.remove("hidden");
-        loadCards();
-      } else {
-        document.getElementById("login-status").innerText = "Invalid credentials!";
+    imageInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (file) {
+        selectedFile = file;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          preview.src = ev.target.result;
+          preview.classList.remove('hidden');
+          extractBtn.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
       }
     });
 
-    // ------------------ OCR FUNCTIONALITY ------------------
-    async function runOCR(file) {
-      const status = document.getElementById("ocr-status");
-      status.textContent = "Starting OCR...";
+    extractBtn.addEventListener('click', async () => {
+      if (!selectedFile) return alert('Please select an image first.');
+      ocrStatus.textContent = 'Extracting text... please wait.';
+      extractBtn.disabled = true;
 
-      try {
-        const worker = Tesseract.createWorker({
-          logger: m => {
-            if (m.status === "recognizing text") {
-              status.textContent = `Recognizing: ${(m.progress * 100).toFixed(0)}%`;
-            }
-          },
-        });
-        await worker.load();
-        await worker.loadLanguage("eng");
-        await worker.initialize("eng");
+      const { data: { text } } = await Tesseract.recognize(selectedFile, 'eng');
+      ocrStatus.textContent = 'Text extracted successfully!';
+      extractBtn.disabled = false;
 
-        const { data: { text } } = await worker.recognize(file);
-        await worker.terminate();
+      const emailMatch = text.match(/\S+@\S+\.\S+/);
+      const phoneMatch = text.match(/(\+?\d[\d\s\-]{7,15})/);
 
-        status.textContent = "OCR complete. Auto-filling fields...";
-        fillFieldsFromText(text);
-      } catch (err) {
-        console.error(err);
-        status.textContent = "OCR failed — try again with a clearer image.";
-      }
-    }
-
-    function fillFieldsFromText(text) {
-      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-      const email = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}/);
-      const phone = text.match(/(\+?\d[\d\s\-]{7,}\d)/);
-
-      document.getElementById("field-name").value = lines[0] || "";
-      document.getElementById("field-company").value = lines[1] || "";
-      document.getElementById("field-email").value = email ? email[0] : "";
-      document.getElementById("field-phone").value = phone ? phone[0] : "";
-      document.getElementById("field-address").value = lines.slice(2).join(", ");
-
-      document.getElementById("preview").classList.remove("hidden");
-    }
-
-    document.getElementById("btn-run-ocr").addEventListener("click", () => {
-      const file = document.getElementById("file-input").files[0];
-      if (!file) return alert("Please select an image.");
-      document.getElementById("card-image").src = URL.createObjectURL(file);
-      runOCR(file);
+      document.getElementById('email').value = emailMatch ? emailMatch[0] : '';
+      document.getElementById('phone').value = phoneMatch ? phoneMatch[0] : '';
+      document.getElementById('name').value = text.split('\n')[0].trim();
+      document.getElementById('company').value = text.split('\n').slice(1, 2).join(' ').trim();
+      document.getElementById('address').value = text.split('\n').slice(2).join(' ').trim();
     });
 
-    // ------------------ SAVE CARD ------------------
-    document.getElementById("btn-save").addEventListener("click", async () => {
-      const name = document.getElementById("field-name").value;
-      const email = document.getElementById("field-email").value;
-      const phone = document.getElementById("field-phone").value;
-      const company = document.getElementById("field-company").value;
-      const address = document.getElementById("field-address").value;
-      const imgFile = document.getElementById("file-input").files[0];
+    saveBtn.addEventListener('click', async () => {
+      if (!selectedFile) return alert('Please upload a visiting card image.');
 
-      const saveStatus = document.getElementById("save-status");
-      saveStatus.textContent = "Uploading...";
-
+      uploadStatus.textContent = 'Uploading... please wait ⏳';
       const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64Image = reader.result.split(",")[1];
-        const data = { name, email, phone, company, address, imageBase64: base64Image, fileName: imgFile.name };
-        try {
-          const res = await fetch(SCRIPT_URL, {
-            method: "POST",
-            body: JSON.stringify(data),
-          });
-          if (res.ok) {
-            saveStatus.textContent = "✅ Card uploaded successfully!";
-            loadCards();
-          } else {
-            saveStatus.textContent = "❌ Upload failed.";
-          }
-        } catch (err) {
-          console.error(err);
-          saveStatus.textContent = "❌ Network error while saving.";
+      reader.onload = async e => {
+        const base64 = e.target.result;
+        const payload = {
+          name: name.value,
+          email: email.value,
+          phone: phone.value,
+          company: company.value,
+          address: address.value,
+          imageBase64: base64,
+          fileName: selectedFile.name,
+          contentType: selectedFile.type
+        };
+
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          uploadStatus.textContent = '✅ Uploaded successfully!';
+          loadCards();
+          resetForm();
+        } else {
+          uploadStatus.textContent = '❌ Upload failed: ' + data.message;
         }
       };
-      reader.readAsDataURL(imgFile);
+      reader.readAsDataURL(selectedFile);
     });
 
-    // ------------------ LOAD CARDS ------------------
     async function loadCards() {
-      try {
-        const res = await fetch(SCRIPT_URL);
-        const data = await res.json();
-        const list = document.getElementById("card-list");
-        list.innerHTML = "";
-        data.slice(1).forEach(row => {
-          const [id, name, email, phone, company, address, img, date] = row;
-          const card = document.createElement("div");
-          card.className = "p-3 border rounded shadow-sm bg-gray-50";
-          card.innerHTML = `
-            <img src="${img}" class="w-24 h-24 object-cover rounded mb-2" />
-            <p><strong>${name}</strong></p>
-            <p>${company}</p>
-            <p>${email}</p>
-            <p>${phone}</p>
-            <p>${address}</p>
-            <button onclick="deleteCard('${id}')" class="bg-red-600 text-white px-2 py-1 mt-2 rounded text-sm hover:bg-red-700">Delete</button>
-          `;
-          list.appendChild(card);
-        });
-      } catch (err) {
-        console.error(err);
-      }
+      cardsContainer.innerHTML = '<p class="text-gray-500 text-center">Loading...</p>';
+      const res = await fetch(API_URL);
+      const json = await res.json();
+      const rows = json.data.slice(1); // skip header
+      displayCards(rows);
     }
 
-    // ------------------ DELETE CARD ------------------
+    function displayCards(rows) {
+      const query = searchInput.value.toLowerCase();
+      const filtered = rows.filter(r => r.join(' ').toLowerCase().includes(query));
+      cardsContainer.innerHTML = filtered.length ? '' : '<p class="text-gray-500 text-center">No cards found.</p>';
+
+      filtered.forEach(row => {
+        const [id, name, email, phone, company, address, imageUrl, timestamp] = row;
+        const card = document.createElement('div');
+        card.className = 'p-4 border rounded-xl shadow hover:shadow-lg transition bg-white flex flex-col';
+        card.innerHTML = `
+          <img src="${imageUrl || ''}" class="w-full h-40 object-cover rounded-xl mb-3" />
+          <h3 class="font-bold text-lg">${name || '(No Name)'}</h3>
+          <p class="text-sm text-gray-600">${company || ''}</p>
+          <p class="text-sm">${email || ''}</p>
+          <p class="text-sm">${phone || ''}</p>
+          <p class="text-sm mb-2 text-gray-700">${address || ''}</p>
+          <div class="flex justify-between mt-auto">
+            <button class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600" onclick="editCard('${id}')">Edit</button>
+            <button class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700" onclick="deleteCard('${id}')">Delete</button>
+          </div>
+        `;
+        cardsContainer.appendChild(card);
+      });
+    }
+
     async function deleteCard(id) {
-      if (!confirm("Delete this card?")) return;
-      await fetch(SCRIPT_URL + "?id=" + id, { method: "DELETE" });
+      if (!confirm('Delete this card?')) return;
+      await fetch(API_URL, { method: 'DELETE', body: JSON.stringify({ id }) });
       loadCards();
     }
+
+    function editCard(id) {
+      alert('Editing is supported — to implement inline editing or modal edit UI next!');
+    }
+
+    function resetForm() {
+      [name, email, phone, company, address].forEach(i => i.value = '');
+      preview.src = '';
+      preview.classList.add('hidden');
+      extractBtn.classList.add('hidden');
+      imageInput.value = '';
+      selectedFile = null;
+    }
+
+    searchInput.addEventListener('input', loadCards);
+    document.getElementById('refreshBtn').addEventListener('click', loadCards);
+
+    loadCards(); // initial load
   </script>
 </body>
 </html>
