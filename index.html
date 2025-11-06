@@ -1,502 +1,188 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Visiting Card Manager (OCR + Drive/Sheets)</title>
-
-  <!-- Tailwind CDN (ok for prototyping on GitHub Pages) -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visiting Card Manager</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Tesseract.js (browser OCR) -->
-  <!--<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script> -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@v5.0.3/dist/tesseract.min.js"></script>
-
-  <style>
-    /* small custom tweaks */
-    .hidden { display: none; }
-    .card-img { height: 160px; object-fit: cover; width: 100%; border-radius: 6px; }
-    .modal-backdrop { background: rgba(0,0,0,0.5); }
-  </style>
+  <!-- ✅ Stable OCR version -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-start justify-center p-6">
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
 
-  <div class="w-full max-w-5xl">
-    <!-- LOGIN SCREEN -->
-    <div id="screen-login" class="mx-auto bg-white rounded-lg shadow p-6 max-w-sm">
-      <h2 class="text-2xl font-semibold text-center mb-4">Admin Login</h2>
-      <input id="login-user" class="border rounded p-2 w-full mb-3" placeholder="Username" />
-      <input id="login-pass" type="password" class="border rounded p-2 w-full mb-3" placeholder="Password" />
-      <button id="login-btn" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Login</button>
-      <p id="login-msg" class="text-center text-sm mt-3 text-red-500"></p>
-      <p class="text-xs text-gray-500 mt-3">Default admin: <strong>Admin</strong> / <strong>admin123</strong></p>
-    </div>
-
-    <!-- APP (hidden until login) -->
-    <div id="screen-app" class="hidden">
-
-      <!-- HEADER -->
-      <div class="flex items-center justify-between mb-4">
-        <h1 class="text-2xl font-bold">Visiting Card Manager</h1>
-        <div class="flex items-center gap-3">
-          <button id="nav-upload" class="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700">Upload</button>
-          <button id="nav-dashboard" class="px-3 py-1 bg-slate-100 rounded hover:bg-slate-200">Dashboard</button>
-          <button id="logout" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">Logout</button>
-        </div>
-      </div>
-
-      <!-- UPLOAD / OCR SCREEN -->
-      <div id="screen-upload" class="bg-white rounded-lg shadow p-6 mb-6">
-        <div class="md:flex md:gap-6">
-          <div class="md:w-1/2">
-            <label class="block font-medium mb-2">Upload visiting card image</label>
-            <input id="file-input" type="file" accept="image/*" class="border p-2 rounded w-full" />
-            <div id="img-preview-holder" class="mt-3 hidden">
-              <img id="img-preview" src="" alt="preview" class="card-img border" />
-            </div>
-
-            <div id="ocr-status" class="mt-3 text-sm text-gray-600"></div>
-          </div>
-
-          <div class="md:w-1/2 mt-4 md:mt-0">
-            <label class="block font-medium mb-2">Extracted / editable fields</label>
-
-            <input id="field-name" placeholder="Name" class="border p-2 rounded w-full mb-2" />
-            <input id="field-email" placeholder="Email" class="border p-2 rounded w-full mb-2" />
-            <input id="field-phone" placeholder="Phone" class="border p-2 rounded w-full mb-2" />
-            <input id="field-company" placeholder="Company" class="border p-2 rounded w-full mb-2" />
-            <textarea id="field-address" placeholder="Address" class="border p-2 rounded w-full mb-2"></textarea>
-
-            <div class="flex gap-3 mt-3">
-              <button id="btn-run-ocr" class="bg-yellow-500 px-4 py-2 rounded text-white hover:bg-yellow-600">Run OCR</button>
-              <button id="btn-save" class="bg-green-600 px-4 py-2 rounded text-white hover:bg-green-700">Save Card</button>
-              <button id="btn-clear" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">Clear</button>
-            </div>
-
-            <div id="save-status" class="mt-3 text-sm font-medium"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- DASHBOARD SCREEN -->
-      <div id="screen-dashboard" class="bg-white rounded-lg shadow p-6 hidden">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex gap-2 items-center">
-            <input id="search-input" placeholder="Search name / company / email / phone" class="border p-2 rounded w-96" />
-            <button id="btn-refresh" class="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Refresh</button>
-          </div>
-          <div id="dashboard-status" class="text-sm text-gray-600"></div>
-        </div>
-
-        <div id="cards-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
-      </div>
-
-    </div>
+  <!-- Login Section -->
+  <div id="login-section" class="bg-white shadow-md rounded-xl p-6 w-full max-w-sm">
+    <h2 class="text-2xl font-bold mb-4 text-center">Admin Login</h2>
+    <input id="login-user" type="text" placeholder="Username" class="border p-2 w-full mb-3 rounded" />
+    <input id="login-pass" type="password" placeholder="Password" class="border p-2 w-full mb-4 rounded" />
+    <button id="btn-login" class="bg-blue-600 text-white px-4 py-2 rounded w-full hover:bg-blue-700">Login</button>
+    <p id="login-status" class="text-center text-red-500 mt-2"></p>
   </div>
 
-  <!-- EDIT MODAL (text-only editing) -->
-  <div id="edit-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center">
-    <div class="modal-backdrop absolute inset-0"></div>
-    <div class="bg-white rounded-lg shadow-xl z-50 max-w-lg w-full p-4">
-      <h3 class="text-lg font-semibold mb-2">Edit Card</h3>
-      <input id="edit-name" class="border p-2 rounded w-full mb-2" />
-      <input id="edit-email" class="border p-2 rounded w-full mb-2" />
-      <input id="edit-phone" class="border p-2 rounded w-full mb-2" />
-      <input id="edit-company" class="border p-2 rounded w-full mb-2" />
-      <textarea id="edit-address" class="border p-2 rounded w-full mb-2"></textarea>
+  <!-- Dashboard Section -->
+  <div id="dashboard" class="hidden w-full max-w-3xl">
+    <h2 class="text-2xl font-bold text-center mb-4">Visiting Card Dashboard</h2>
 
-      <div class="flex justify-end gap-2">
-        <button id="edit-cancel" class="px-3 py-1 rounded bg-gray-300">Cancel</button>
-        <button id="edit-save" class="px-3 py-1 rounded bg-green-600 text-white">Save</button>
+    <!-- Upload Form -->
+    <div class="bg-white shadow-md rounded-xl p-4 mb-6">
+      <input type="file" id="file-input" accept="image/*" class="mb-3" />
+      <button id="btn-run-ocr" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Run OCR</button>
+      <p id="ocr-status" class="text-blue-600 text-sm mt-2"></p>
+
+      <div id="preview" class="mt-4 hidden">
+        <img id="card-image" class="w-48 rounded shadow mb-3" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input id="field-name" placeholder="Name" class="border p-2 rounded" />
+          <input id="field-email" placeholder="Email" class="border p-2 rounded" />
+          <input id="field-phone" placeholder="Phone" class="border p-2 rounded" />
+          <input id="field-company" placeholder="Company" class="border p-2 rounded" />
+          <textarea id="field-address" placeholder="Address" class="border p-2 rounded col-span-2"></textarea>
+        </div>
+        <button id="btn-save" class="bg-green-600 text-white px-4 py-2 mt-4 rounded hover:bg-green-700">Save Card</button>
+        <p id="save-status" class="mt-2 text-sm"></p>
       </div>
+    </div>
+
+    <!-- Saved Cards -->
+    <div class="bg-white shadow-md rounded-xl p-4">
+      <h3 class="text-xl font-semibold mb-3">Saved Cards</h3>
+      <div id="card-list" class="grid gap-4"></div>
     </div>
   </div>
 
   <script>
-  /************* CONFIG *************/
-  // Replace with your deployed Google Apps Script "Web app" URL (the /exec URL)
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwHj3POZOqg1TW9qB6piizcgXhZPWtjkqWWqefnF422KoniNS_XE0ThhmQW6ftjmOAHdg/exec";
-  // CORS fallback proxy — used only if direct fetch fails due to CORS.
-  // corsproxy.io is free and convenient for small personal apps.
-  const CORS_PROXY = "https://corsproxy.io/?";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwHj3POZOqg1TW9qB6piizcgXhZPWtjkqWWqefnF422KoniNS_XE0ThhmQW6ftjmOAHdg/exec"; // Replace with your Apps Script Web App URL
 
-  // admin credentials
-  const ADMIN_USER = "Admin";
-  const ADMIN_PASS = "admin123";
-
-  /************* UTIL: API fetch with automatic CORS fallback *************/
-  async function apiFetch(method = "GET", body = null) {
-    // try direct call first
-    try {
-      const opts = {
-        method,
-        headers: {}
-      };
-      if (body) {
-        opts.body = JSON.stringify(body);
-        opts.headers["Content-Type"] = "application/json";
-      }
-      const res = await fetch(SCRIPT_URL, opts);
-      // some responses from Apps Script may return 200 but still be blocked by CORS earlier;
-      // if fetch succeeds, parse as JSON (safe if script returns JSON)
-      const json = await res.json().catch(() => null);
-      return { ok: true, json, status: res.status, usedProxy: false };
-    } catch (err) {
-      console.warn("Direct fetch failed, trying CORS proxy...", err);
-      // fallback to proxy
-      try {
-        const opts2 = {
-          method,
-          headers: {}
-        };
-        if (body) {
-          opts2.body = JSON.stringify(body);
-          opts2.headers["Content-Type"] = "application/json";
-        }
-        const res2 = await fetch(CORS_PROXY + SCRIPT_URL, opts2);
-        const json2 = await res2.json().catch(() => null);
-        return { ok: true, json: json2, status: res2.status, usedProxy: true };
-      } catch (err2) {
-        console.error("CORS proxy also failed", err2);
-        return { ok: false, error: err2 };
-      }
-    }
-  }
-
-  /************* UI helpers *************/
-  const showScreen = (id) => {
-    ["screen-login","screen-app"].forEach(s => {
-      document.getElementById(s).classList.toggle("hidden", s !== "screen-app");
-    });
-    // inside app, switch sub screens
-    if (id === "upload") {
-      document.getElementById("screen-upload").classList.remove("hidden");
-      document.getElementById("screen-dashboard").classList.add("hidden");
-    } else {
-      document.getElementById("screen-upload").classList.add("hidden");
-      document.getElementById("screen-dashboard").classList.remove("hidden");
-    }
-  };
-
-  function setSaveStatus(text, color="black") {
-    const el = document.getElementById("save-status");
-    el.innerText = text;
-    el.style.color = color;
-  }
-  function setGlobalStatus(text, color="black") {
-    const el = document.getElementById("dashboard-status");
-    el.innerText = text;
-    el.style.color = color;
-  }
-
-  /************* LOGIN HANDLERS *************/
-  document.getElementById("login-btn").addEventListener("click", () => {
-    const u = document.getElementById("login-user").value.trim();
-    const p = document.getElementById("login-pass").value.trim();
-    const msg = document.getElementById("login-msg");
-    if (u === ADMIN_USER && p === ADMIN_PASS) {
-      // show app
-      document.getElementById("screen-login").classList.add("hidden");
-      document.getElementById("screen-app").classList.remove("hidden");
-      // default to upload screen
-      showScreen("upload");
-    } else {
-      msg.innerText = "Invalid credentials";
-    }
-  });
-  document.getElementById("logout").addEventListener("click", () => {
-    location.reload(); // simple logout
-  });
-
-  // nav
-  document.getElementById("nav-upload").addEventListener("click", () => showScreen("upload"));
-  document.getElementById("nav-dashboard").addEventListener("click", () => { showScreen("dashboard"); loadCards(); });
-
-  /************* OCR FLOW *************/
-  let lastSelectedFile = null;
-
-  document.getElementById("file-input").addEventListener("change", (ev) => {
-    const f = ev.target.files[0];
-    lastSelectedFile = f || null;
-    setSaveStatus("", "black");
-    if (!f) {
-      document.getElementById("img-preview-holder").classList.add("hidden");
-      document.getElementById("img-preview").src = "";
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      document.getElementById("img-preview").src = e.target.result;
-      document.getElementById("img-preview-holder").classList.remove("hidden");
-    };
-    reader.readAsDataURL(f);
-  });
-
-  document.getElementById("btn-run-ocr").addEventListener("click", async () => {
-    if (!lastSelectedFile) {
-      setSaveStatus("Please upload an image first.", "red");
-      return;
-    }
-    setSaveStatus("🔎 Running OCR — please wait...", "orange");
-    document.getElementById("ocr-status").innerText = "OCR running...";
-    try {
-      const worker = Tesseract.createWorker({
-        logger: m => {
-          // optional: console.log(m);
-          if (m.status && m.status === 'recognizing text') {
-            document.getElementById("ocr-status").innerText = `OCR: ${Math.round((m.progress||0)*100)}%`;
-          }
-        }
-      });
-      await worker.load();
-      await worker.loadLanguage('eng');
-      await worker.initialize('eng');
-
-      const { data: { text } } = await worker.recognize(lastSelectedFile);
-      await worker.terminate();
-      document.getElementById("ocr-status").innerText = "OCR complete — fields auto-filled where possible.";
-
-      // naive parsing — extract email, phone, name heuristics
-      const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-      const joined = lines.join(" ");
-      const emailMatch = joined.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}/i);
-      const phoneMatch = joined.match(/(\+?\d[\d\s\-]{7,}\d)/);
-
-      // Heuristics:
-      document.getElementById("field-name").value = lines[0] || "";
-      document.getElementById("field-email").value = emailMatch ? emailMatch[0] : "";
-      document.getElementById("field-phone").value = phoneMatch ? phoneMatch[0] : "";
-      // company often second line
-      document.getElementById("field-company").value = lines.length > 1 ? lines[1] : "";
-      // address: last few lines
-      document.getElementById("field-address").value = lines.slice(2).join(", ") || "";
-      setSaveStatus("OCR finished. Verify & edit fields before saving.", "green");
-    } catch (err) {
-      console.error("OCR failed", err);
-      setSaveStatus("OCR failed — try a clearer image.", "red");
-      document.getElementById("ocr-status").innerText = "";
-    }
-  });
-
-  document.getElementById("btn-clear").addEventListener("click", () => {
-    lastSelectedFile = null;
-    document.getElementById("file-input").value = "";
-    document.getElementById("img-preview").src = "";
-    document.getElementById("img-preview-holder").classList.add("hidden");
-    ["field-name","field-email","field-phone","field-company","field-address"].forEach(id => document.getElementById(id).value = "");
-    setSaveStatus("", "black");
-  });
-
-  /************* SAVE (POST) *************/
-  document.getElementById("btn-save").addEventListener("click", async () => {
-    const name = document.getElementById("field-name").value.trim();
-    const email = document.getElementById("field-email").value.trim();
-    const phone = document.getElementById("field-phone").value.trim();
-    const company = document.getElementById("field-company").value.trim();
-    const address = document.getElementById("field-address").value.trim();
-    const file = lastSelectedFile;
-    if (!file) { setSaveStatus("Please upload an image before saving.", "red"); return; }
-
-    setSaveStatus("⏳ Preparing upload...", "orange");
-
-    // read file as base64
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result.split(",")[1];
-      const payload = { name, email, phone, company, address, imageBase64: base64, fileName: file.name };
-
-      setSaveStatus("⏳ Uploading to server...", "orange");
-      const res = await apiFetch("POST", payload);
-      if (!res.ok) {
-        setSaveStatus("❌ Upload failed (network or CORS).", "red");
-        return;
-      }
-      // Accept multiple shapes of response:
-      const body = res.json || res.json === null ? res.json : null;
-      // Some scripts return {status:'OK', fileUrl:...} or return raw array; handle both:
-      let ok = false;
-      if (body && (body.status === "success" || body.status === "OK" || body.status === "ok")) ok = true;
-      // fallback: if direct array returned (sheet data) treat as success
-      if (!body && res.status === 200) ok = true;
-
-      if (ok) {
-        setSaveStatus("✅ Card uploaded successfully!", "green");
-        // reset form
-        document.getElementById("btn-clear").click();
-        // refresh dashboard if visible
-        if (!document.getElementById("screen-dashboard").classList.contains("hidden")) {
-          loadCards();
-        }
+    // ------------------ LOGIN ------------------
+    document.getElementById("btn-login").addEventListener("click", () => {
+      const user = document.getElementById("login-user").value.trim();
+      const pass = document.getElementById("login-pass").value.trim();
+      if (user === "Admin" && pass === "admin123") {
+        document.getElementById("login-section").classList.add("hidden");
+        document.getElementById("dashboard").classList.remove("hidden");
+        loadCards();
       } else {
-        // try to inspect body
-        console.log("Upload result:", body, res);
-        setSaveStatus("⚠️ Upload returned unexpected response. Check console.", "red");
+        document.getElementById("login-status").innerText = "Invalid credentials!";
       }
-    };
-    reader.readAsDataURL(file);
-  });
+    });
 
-  /************* LOAD CARDS (GET) *************/
-  async function loadCards() {
-    setGlobalStatus("⏳ Loading cards...", "orange");
-    const res = await apiFetch("GET");
-    if (!res.ok) {
-      setGlobalStatus("❌ Failed to load cards (network/CORS).", "red");
-      return;
-    }
-    const body = res.json;
-    // Body might be: {status:'OK', data: [...] } or raw array [...]
-    let rows = [];
-    if (body) {
-      if (Array.isArray(body)) rows = body;
-      else if (body.data && Array.isArray(body.data)) rows = body.data;
-      else if (body.status && body.status.toLowerCase()==='ok' && body.data) rows = body.data;
-      else {
-        // if Apps Script returned text JSON string of array directly
-        // try parse it:
-        const tryArr = Array.isArray(body) ? body : null;
-        if (tryArr) rows = tryArr;
+    // ------------------ OCR FUNCTIONALITY ------------------
+    async function runOCR(file) {
+      const status = document.getElementById("ocr-status");
+      status.textContent = "Starting OCR...";
+
+      try {
+        const worker = Tesseract.createWorker({
+          logger: m => {
+            if (m.status === "recognizing text") {
+              status.textContent = `Recognizing: ${(m.progress * 100).toFixed(0)}%`;
+            }
+          },
+        });
+        await worker.load();
+        await worker.loadLanguage("eng");
+        await worker.initialize("eng");
+
+        const { data: { text } } = await worker.recognize(file);
+        await worker.terminate();
+
+        status.textContent = "OCR complete. Auto-filling fields...";
+        fillFieldsFromText(text);
+      } catch (err) {
+        console.error(err);
+        status.textContent = "OCR failed — try again with a clearer image.";
       }
     }
-    // rows expected: header row + data rows from sheet
-    if (!rows || rows.length === 0) {
-      setGlobalStatus("No cards found.", "gray");
-      document.getElementById("cards-grid").innerHTML = "";
-      return;
+
+    function fillFieldsFromText(text) {
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const email = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}/);
+      const phone = text.match(/(\+?\d[\d\s\-]{7,}\d)/);
+
+      document.getElementById("field-name").value = lines[0] || "";
+      document.getElementById("field-company").value = lines[1] || "";
+      document.getElementById("field-email").value = email ? email[0] : "";
+      document.getElementById("field-phone").value = phone ? phone[0] : "";
+      document.getElementById("field-address").value = lines.slice(2).join(", ");
+
+      document.getElementById("preview").classList.remove("hidden");
     }
 
-    // if first row is header strings (ID, Name, ...), remove it for display
-    const header = rows[0].map ? rows[0] : null;
-    if (header && header[0] && typeof header[0] === "string" && header.some(c => /name|email|phone/i.test(c))) {
-      rows = rows.slice(1);
-    }
+    document.getElementById("btn-run-ocr").addEventListener("click", () => {
+      const file = document.getElementById("file-input").files[0];
+      if (!file) return alert("Please select an image.");
+      document.getElementById("card-image").src = URL.createObjectURL(file);
+      runOCR(file);
+    });
 
-    // transform rows into objects if possible: expected order in sheet:
-    // ID | Name | Email | Phone | Company | Address | ImageURL | Date
-    const cards = rows.map(r => {
-      return {
-        id: r[0],
-        name: r[1] || '',
-        email: r[2] || '',
-        phone: r[3] || '',
-        company: r[4] || '',
-        address: r[5] || '',
-        imageUrl: r[6] || ''
+    // ------------------ SAVE CARD ------------------
+    document.getElementById("btn-save").addEventListener("click", async () => {
+      const name = document.getElementById("field-name").value;
+      const email = document.getElementById("field-email").value;
+      const phone = document.getElementById("field-phone").value;
+      const company = document.getElementById("field-company").value;
+      const address = document.getElementById("field-address").value;
+      const imgFile = document.getElementById("file-input").files[0];
+
+      const saveStatus = document.getElementById("save-status");
+      saveStatus.textContent = "Uploading...";
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Image = reader.result.split(",")[1];
+        const data = { name, email, phone, company, address, imageBase64: base64Image, fileName: imgFile.name };
+        try {
+          const res = await fetch(SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify(data),
+          });
+          if (res.ok) {
+            saveStatus.textContent = "✅ Card uploaded successfully!";
+            loadCards();
+          } else {
+            saveStatus.textContent = "❌ Upload failed.";
+          }
+        } catch (err) {
+          console.error(err);
+          saveStatus.textContent = "❌ Network error while saving.";
+        }
       };
+      reader.readAsDataURL(imgFile);
     });
 
-    renderCards(cards);
-    setGlobalStatus(`✅ ${cards.length} cards loaded.`, "green");
-  }
-
-  function renderCards(cards) {
-    const grid = document.getElementById("cards-grid");
-    const q = document.getElementById("search-input").value.trim().toLowerCase();
-    const filtered = cards.filter(c => {
-      const s = `${c.name} ${c.company} ${c.email} ${c.phone} ${c.address}`.toLowerCase();
-      return q === '' || s.includes(q);
-    });
-
-    if (filtered.length === 0) {
-      grid.innerHTML = `<div class="text-gray-500 col-span-3">No cards match your search.</div>`;
-      return;
+    // ------------------ LOAD CARDS ------------------
+    async function loadCards() {
+      try {
+        const res = await fetch(SCRIPT_URL);
+        const data = await res.json();
+        const list = document.getElementById("card-list");
+        list.innerHTML = "";
+        data.slice(1).forEach(row => {
+          const [id, name, email, phone, company, address, img, date] = row;
+          const card = document.createElement("div");
+          card.className = "p-3 border rounded shadow-sm bg-gray-50";
+          card.innerHTML = `
+            <img src="${img}" class="w-24 h-24 object-cover rounded mb-2" />
+            <p><strong>${name}</strong></p>
+            <p>${company}</p>
+            <p>${email}</p>
+            <p>${phone}</p>
+            <p>${address}</p>
+            <button onclick="deleteCard('${id}')" class="bg-red-600 text-white px-2 py-1 mt-2 rounded text-sm hover:bg-red-700">Delete</button>
+          `;
+          list.appendChild(card);
+        });
+      } catch (err) {
+        console.error(err);
+      }
     }
 
-    grid.innerHTML = filtered.map(c => `
-      <div class="bg-white rounded-lg p-3 shadow">
-        <div class="mb-3 h-40 overflow-hidden rounded">
-          <img src="${c.imageUrl || ''}" alt="${escapeHtml(c.name)}" class="card-img bg-gray-200" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;400&quot; height=&quot;200&quot;><rect width=&quot;100%&quot; height=&quot;100%&quot; fill=&quot;%23efefef&quot;/><text x=&quot;50%&quot; y=&quot;50%&quot; dominant-baseline=&quot;middle&quot; text-anchor=&quot;middle&quot; fill=&quot;%23999&quot; font-size=&quot;16&quot;>No image</text></svg>';" />
-        </div>
-        <h3 class="font-semibold text-lg">${escapeHtml(c.name)}</h3>
-        <p class="text-sm text-gray-600">${escapeHtml(c.company)}</p>
-        <p class="text-sm text-gray-600">${escapeHtml(c.email)}</p>
-        <p class="text-sm text-gray-600">${escapeHtml(c.phone)}</p>
-        <p class="text-xs text-gray-500 mt-2">${escapeHtml(c.address)}</p>
-
-        <div class="flex justify-end gap-2 mt-3">
-          <button class="px-2 py-1 bg-yellow-500 text-white rounded text-sm edit-btn" data-id="${c.id}">Edit</button>
-          <button class="px-2 py-1 bg-red-500 text-white rounded text-sm delete-btn" data-id="${c.id}">Delete</button>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  // escape helper
-  function escapeHtml(s) { return (s||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-  // refresh on button
-  document.getElementById("btn-refresh").addEventListener("click", loadCards);
-  document.getElementById("search-input").addEventListener("input", () => {
-    // quick local filter if cards loaded; we just reload afterwards for accuracy
-    loadCards();
-  });
-
-  /************* EDIT / DELETE HANDLERS (delegated) *************/
-  document.addEventListener("click", async (ev) => {
-    const t = ev.target;
-    if (t.classList.contains("edit-btn")) {
-      const id = t.dataset.id;
-      // load row data into modal fields
-      // approach: find card in current grid (DOM) and parse values
-      const cardDiv = t.closest(".bg-white");
-      const name = cardDiv.querySelector("h3")?.innerText || "";
-      const company = cardDiv.querySelectorAll("p")[0]?.innerText || "";
-      const email = cardDiv.querySelectorAll("p")[1]?.innerText || "";
-      const phone = cardDiv.querySelectorAll("p")[2]?.innerText || "";
-      const address = cardDiv.querySelectorAll("p")[3]?.innerText || cardDiv.querySelector("p:last-child")?.innerText || "";
-
-      document.getElementById("edit-name").value = name;
-      document.getElementById("edit-email").value = email;
-      document.getElementById("edit-phone").value = phone;
-      document.getElementById("edit-company").value = company;
-      document.getElementById("edit-address").value = address;
-
-      // store editing id
-      document.getElementById("edit-save").dataset.editId = id;
-      // show modal
-      document.getElementById("edit-modal").classList.remove("hidden");
-    }
-
-    if (t.classList.contains("delete-btn")) {
-      const id = t.dataset.id;
+    // ------------------ DELETE CARD ------------------
+    async function deleteCard(id) {
       if (!confirm("Delete this card?")) return;
-      setGlobalStatus("⏳ Deleting...", "orange");
-      const res = await apiFetch("DELETE", { id });
-      if (!res.ok) { setGlobalStatus("❌ Delete failed (network/CORS).", "red"); return; }
-      // inspect response if possible
-      setGlobalStatus("✅ Deleted (refreshing)...", "green");
+      await fetch(SCRIPT_URL + "?id=" + id, { method: "DELETE" });
       loadCards();
     }
-  });
-
-  // modal cancel/save
-  document.getElementById("edit-cancel").addEventListener("click", () => {
-    document.getElementById("edit-modal").classList.add("hidden");
-  });
-
-  document.getElementById("edit-save").addEventListener("click", async () => {
-    const id = document.getElementById("edit-save").dataset.editId;
-    const payload = {
-      id,
-      name: document.getElementById("edit-name").value.trim(),
-      email: document.getElementById("edit-email").value.trim(),
-      phone: document.getElementById("edit-phone").value.trim(),
-      company: document.getElementById("edit-company").value.trim(),
-      address: document.getElementById("edit-address").value.trim(),
-      // note: imageUrl is not updated here (text-only edit). To change image, re-upload as new card.
-      imageUrl: "" 
-    };
-    setGlobalStatus("⏳ Saving changes...", "orange");
-    const res = await apiFetch("PUT", payload);
-    if (!res.ok) { setGlobalStatus("❌ Update failed (network/CORS).", "red"); return; }
-    setGlobalStatus("✅ Updated. Reloading...", "green");
-    document.getElementById("edit-modal").classList.add("hidden");
-    loadCards();
-  });
-
-  /************* Init: show login screen (already default) *************/
-  // Optionally auto-show dashboard if you want auto-login; currently require manual login.
-
   </script>
 </body>
 </html>
