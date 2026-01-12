@@ -11,7 +11,6 @@
   <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-6">
     <h1 class="text-3xl font-bold text-center mb-6 text-blue-700">📇 Visiting Card Organizer</h1>
 
-    <!-- Upload + OCR Section -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="border p-4 rounded-xl bg-gray-50 flex flex-col items-center justify-center">
         <input type="file" id="imageInput" accept="image/*" class="hidden" />
@@ -21,8 +20,8 @@
         <p id="ocrStatus" class="text-gray-500 mt-2 text-sm"></p>
       </div>
 
-      <!-- Editable Fields -->
       <div class="space-y-3">
+        <input type="hidden" id="editId" />
         <input type="text" id="name" placeholder="Name" class="w-full border rounded-xl p-2 focus:ring-2 focus:ring-blue-500" />
         <input type="email" id="email" placeholder="Email" class="w-full border rounded-xl p-2 focus:ring-2 focus:ring-blue-500" />
         <input type="text" id="phone" placeholder="Phone" class="w-full border rounded-xl p-2 focus:ring-2 focus:ring-blue-500" />
@@ -34,14 +33,12 @@
       </div>
     </div>
 
-    <!-- Divider -->
     <hr class="my-6" />
 
-    <!-- Card List Section -->
     <div>
       <h2 class="text-2xl font-semibold mb-4">Saved Visiting Cards</h2>
       <div class="flex justify-between mb-3">
-        <input type="text" id="searchInput" placeholder="🔍 Search by name, company, or phone" class="border p-2 rounded-xl w-2/3 focus:ring-2 focus:ring-blue-500" />
+        <input type="text" id="searchInput" placeholder="🔍 Search..." class="border p-2 rounded-xl w-2/3" />
         <button id="refreshBtn" class="bg-gray-700 text-white px-4 py-2 rounded-xl hover:bg-gray-800">🔄 Refresh</button>
       </div>
       <div id="cardsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
@@ -49,17 +46,20 @@
   </div>
 
   <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbws1VWAiDnnVzMdmWoyULF8LLmyyXB_rxeMj-VQc-zfpO2cwD-gp4zv1IH55bigMWhI_w/exec';
+    // REPLACE THIS WITH YOUR NEW DEPLOYMENT URL
+    const API_URL = 'https://script.google.com/macros/s/AKfycbz8X05EtY9sEDFCkarTu_-nIbrKR2nsXAoqzSOsK3OnN_2lB8psh59-MG0ymdsYC6mpXw/exec';
+    
     let selectedFile = null;
+    let allRows = [];
+
+    // --- Selectors ---
     const imageInput = document.getElementById('imageInput');
     const preview = document.getElementById('preview');
     const extractBtn = document.getElementById('extractBtn');
-    const ocrStatus = document.getElementById('ocrStatus');
     const saveBtn = document.getElementById('saveBtn');
     const uploadStatus = document.getElementById('uploadStatus');
-    const cardsContainer = document.getElementById('cardsContainer');
-    const searchInput = document.getElementById('searchInput');
 
+    // --- Image Preview & OCR ---
     imageInput.addEventListener('change', e => {
       const file = e.target.files[0];
       if (file) {
@@ -75,116 +75,128 @@
     });
 
     extractBtn.addEventListener('click', async () => {
-      if (!selectedFile) return alert('Please select an image first.');
-      ocrStatus.textContent = 'Extracting text... please wait.';
-      extractBtn.disabled = true;
-
+      document.getElementById('ocrStatus').textContent = 'Extracting...';
       const { data: { text } } = await Tesseract.recognize(selectedFile, 'eng');
-      ocrStatus.textContent = 'Text extracted successfully!';
-      extractBtn.disabled = false;
-
-      const emailMatch = text.match(/\S+@\S+\.\S+/);
-      const phoneMatch = text.match(/(\+?\d[\d\s\-]{7,15})/);
-
-      document.getElementById('email').value = emailMatch ? emailMatch[0] : '';
-      document.getElementById('phone').value = phoneMatch ? phoneMatch[0] : '';
-      document.getElementById('name').value = text.split('\n')[0].trim();
-      document.getElementById('company').value = text.split('\n').slice(1, 2).join(' ').trim();
-      document.getElementById('address').value = text.split('\n').slice(2).join(' ').trim();
+      document.getElementById('ocrStatus').textContent = 'Done!';
+      
+      const lines = text.split('\n').filter(l => l.trim() !== '');
+      document.getElementById('name').value = lines[0] || '';
+      document.getElementById('email').value = text.match(/\S+@\S+\.\S+/)?.[0] || '';
+      document.getElementById('phone').value = text.match(/(\+?\d[\d\s\-]{7,15})/)?.[0] || '';
     });
 
+    // --- Create / Update ---
     saveBtn.addEventListener('click', async () => {
-      if (!selectedFile) return alert('Please upload a visiting card image.');
+      const editId = document.getElementById('editId').value;
+      const action = editId ? 'UPDATE' : 'CREATE';
+      
+      uploadStatus.textContent = 'Processing... ⏳';
 
-      uploadStatus.textContent = 'Uploading... please wait ⏳';
-      const reader = new FileReader();
-      reader.onload = async e => {
-        const base64 = e.target.result;
+      const sendRequest = async (base64Data = null) => {
         const payload = {
-          name: name.value,
-          email: email.value,
-          phone: phone.value,
-          company: company.value,
-          address: address.value,
-          imageBase64: base64,
-          fileName: selectedFile.name,
-          contentType: selectedFile.type
+          action: action,
+          id: editId || null,
+          name: document.getElementById('name').value,
+          email: document.getElementById('email').value,
+          phone: document.getElementById('phone').value,
+          company: document.getElementById('company').value,
+          address: document.getElementById('address').value,
+          imageBase64: base64Data,
+          fileName: selectedFile ? selectedFile.name : null
         };
 
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await res.json();
-        if (data.status === 'success') {
-          uploadStatus.textContent = '✅ Uploaded successfully!';
-          loadCards();
+        try {
+          // POST to bypass CORS issues with PUT/DELETE
+          const res = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          uploadStatus.textContent = '✅ Action successful!';
           resetForm();
-        } else {
-          uploadStatus.textContent = '❌ Upload failed: ' + data.message;
+          loadCards();
+        } catch (err) {
+          uploadStatus.textContent = '❌ Error: ' + err.message;
         }
       };
-      reader.readAsDataURL(selectedFile);
+
+      if (selectedFile && action === 'CREATE') {
+        const reader = new FileReader();
+        reader.onload = e => sendRequest(e.target.result);
+        reader.readAsDataURL(selectedFile);
+      } else {
+        sendRequest();
+      }
     });
 
+    // --- Data Loading ---
     async function loadCards() {
-      cardsContainer.innerHTML = '<p class="text-gray-500 text-center">Loading...</p>';
+      const container = document.getElementById('cardsContainer');
+      container.innerHTML = 'Loading...';
       const res = await fetch(API_URL);
       const json = await res.json();
-      const rows = json.data.slice(1); // skip header
-      displayCards(rows);
+      allRows = json.data.slice(1); 
+      displayCards(allRows);
     }
 
     function displayCards(rows) {
-      const query = searchInput.value.toLowerCase();
-      const filtered = rows.filter(r => r.join(' ').toLowerCase().includes(query));
-      cardsContainer.innerHTML = filtered.length ? '' : '<p class="text-gray-500 text-center">No cards found.</p>';
-
-      filtered.forEach(row => {
-        const [id, name, email, phone, company, address, imageUrl, timestamp] = row;
-        const card = document.createElement('div');
-        card.className = 'p-4 border rounded-xl shadow hover:shadow-lg transition bg-white flex flex-col';
-        card.innerHTML = `
-          <img src="${imageUrl || ''}" class="w-full h-40 object-cover rounded-xl mb-3" />
-          <h3 class="font-bold text-lg">${name || '(No Name)'}</h3>
-          <p class="text-sm text-gray-600">${company || ''}</p>
-          <p class="text-sm">${email || ''}</p>
-          <p class="text-sm">${phone || ''}</p>
-          <p class="text-sm mb-2 text-gray-700">${address || ''}</p>
-          <div class="flex justify-between mt-auto">
-            <button class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600" onclick="editCard('${id}')">Edit</button>
-            <button class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700" onclick="deleteCard('${id}')">Delete</button>
+      const container = document.getElementById('cardsContainer');
+      container.innerHTML = '';
+      rows.forEach(row => {
+        const [id, name, email, phone, company, address, imageUrl] = row;
+        const div = document.createElement('div');
+        div.className = 'p-4 border rounded-xl bg-white shadow flex flex-col';
+        div.innerHTML = `
+          <img src="${imageUrl}" class="h-32 w-full object-cover rounded mb-2">
+          <h3 class="font-bold">${name}</h3>
+          <p class="text-xs text-gray-500">${company}</p>
+          <p class="text-sm">${phone}</p>
+          <div class="flex gap-2 mt-4">
+            <button onclick="editCard('${id}')" class="bg-yellow-500 text-white text-xs px-2 py-1 rounded">Edit</button>
+            <button onclick="deleteCard('${id}')" class="bg-red-500 text-white text-xs px-2 py-1 rounded">Delete</button>
           </div>
         `;
-        cardsContainer.appendChild(card);
+        container.appendChild(div);
       });
     }
 
+    // --- Delete ---
     async function deleteCard(id) {
-      if (!confirm('Delete this card?')) return;
-      await fetch(API_URL, { method: 'DELETE', body: JSON.stringify({ id }) });
+      if (!confirm('Are you sure?')) return;
+      await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'DELETE', id: id })
+      });
       loadCards();
     }
 
+    // --- Edit Mode ---
     function editCard(id) {
-      alert('Editing is supported — to implement inline editing or modal edit UI next!');
+      const row = allRows.find(r => r[0].toString() === id.toString());
+      if (row) {
+        document.getElementById('editId').value = row[0];
+        document.getElementById('name').value = row[1];
+        document.getElementById('email').value = row[2];
+        document.getElementById('phone').value = row[3];
+        document.getElementById('company').value = row[4];
+        document.getElementById('address').value = row[5];
+        saveBtn.textContent = 'Update Card Details';
+        saveBtn.classList.replace('bg-blue-700', 'bg-yellow-600');
+        window.scrollTo(0, 0);
+      }
     }
 
     function resetForm() {
-      [name, email, phone, company, address].forEach(i => i.value = '');
-      preview.src = '';
+      document.getElementById('editId').value = '';
+      ['name', 'email', 'phone', 'company', 'address'].forEach(id => document.getElementById(id).value = '');
       preview.classList.add('hidden');
-      extractBtn.classList.add('hidden');
-      imageInput.value = '';
       selectedFile = null;
+      saveBtn.textContent = 'Save to Google Sheet';
+      saveBtn.classList.replace('bg-yellow-600', 'bg-blue-700');
     }
 
-    searchInput.addEventListener('input', loadCards);
     document.getElementById('refreshBtn').addEventListener('click', loadCards);
-
-    loadCards(); // initial load
+    loadCards();
   </script>
 </body>
 </html>
