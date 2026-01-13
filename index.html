@@ -3,174 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CardVault | Secure Organizer</title>
+    <title>CardVault Pro | Global Access</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background: #f8fafc; }
         .hidden { display: none !important; }
-        .glass-card { background: white; border: 1px solid #e2e8f0; }
-        
-        /* Spinner Styles */
-        .spinner {
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 0.8s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
-            margin-right: 8px;
-        }
+        .spinner { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        
-        button:disabled { opacity: 0.7; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
     <div id="loginScreen" class="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl text-center">
-            <div class="bg-blue-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">🔐</div>
-            <h2 class="text-2xl font-black text-slate-900 mb-6">Login</h2>
-            <div class="space-y-4 text-left">
-                <input type="text" id="loginUser" placeholder="Username" class="w-full bg-slate-50 border rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="password" id="loginPass" placeholder="Password" class="w-full bg-slate-50 border rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500">
-                <button id="loginBtn" onclick="handleLogin()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition shadow-lg flex justify-center items-center">
-                    <span>Login</span>
-                </button>
-                <p id="loginError" class="text-red-500 text-center text-xs font-bold hidden">Invalid username or password!</p>
-            </div>
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl">
+            <h2 class="text-2xl font-black text-center mb-6">Secure Access</h2>
+            <input type="text" id="loginUser" placeholder="Username" class="w-full border rounded-xl p-4 mb-4 outline-none">
+            <input type="password" id="loginPass" placeholder="Password" class="w-full border rounded-xl p-4 mb-6 outline-none">
+            <button id="loginBtn" onclick="handleLogin()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg flex justify-center items-center">Login</button>
+            <p id="loginError" class="text-red-500 text-center text-xs mt-4 hidden">Invalid Login</p>
         </div>
     </div>
 
     <div id="mainDashboard" class="hidden max-w-6xl mx-auto p-4 md:p-8">
-        <div class="flex justify-between items-center mb-8">
+        <header class="flex justify-between items-center mb-8">
             <h1 class="text-3xl font-black text-slate-800">CardVault <span class="text-blue-600">Pro</span></h1>
-            <button onclick="logout()" class="text-slate-400 hover:text-red-500 font-bold text-xs uppercase transition">Logout ⏻</button>
-        </div>
-
-        <div id="statsBar" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-slate-700">
-            <div class="glass-card p-6 rounded-3xl flex items-center gap-4 shadow-sm">
-                <div class="text-2xl">🗂️</div>
-                <div><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Cards</p><p id="statTotal" class="text-2xl font-black">0</p></div>
-            </div>
-            <div class="glass-card p-6 rounded-3xl flex items-center gap-4 border-b-4 border-blue-500 shadow-sm">
-                <div class="text-2xl">🏢</div>
-                <div><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Companies</p><p id="statCompanies" class="text-2xl font-black">0</p></div>
-            </div>
-            <div class="glass-card p-6 rounded-3xl flex items-center gap-4 shadow-sm">
-                <div class="text-2xl">📅</div>
-                <div><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Latest Scan</p><p id="statDate" class="text-lg font-bold">--</p></div>
-            </div>
-        </div>
+            <button onclick="logout()" class="text-slate-400 font-bold hover:text-red-500 transition">LOGOUT ⏻</button>
+        </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div class="lg:col-span-4">
-                <div class="glass-card p-6 rounded-3xl shadow-sm sticky top-8">
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 sticky top-8">
                     <div class="space-y-4">
-                        <div class="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center cursor-pointer hover:bg-slate-50 transition" onclick="document.getElementById('imageInput').click()">
+                        <div class="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center cursor-pointer hover:bg-slate-50 transition" onclick="document.getElementById('imageInput').click()">
                             <input type="file" id="imageInput" accept="image/*" class="hidden" />
-                            <div id="uploadPlaceholder"><p class="text-xs font-bold text-slate-500">Upload Card Image</p></div>
-                            <img id="preview" class="hidden w-full h-32 object-contain rounded-lg" />
+                            <div id="uploadPlaceholder"><p class="text-sm font-bold text-slate-500">Add Card Image</p></div>
+                            <img id="preview" class="hidden w-full h-40 object-contain rounded-xl" />
                         </div>
-                        <button id="extractBtn" class="hidden w-full bg-blue-50 text-blue-600 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 transition flex justify-center items-center">
-                            <span>✨ Extract Text</span>
-                        </button>
+                        <button id="extractBtn" class="hidden w-full bg-blue-50 text-blue-600 py-2 rounded-xl text-xs font-bold">✨ Extract Text</button>
                         <input type="hidden" id="editId">
-                        <div class="space-y-3">
-                            <input type="text" id="name" placeholder="Name" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                            <input type="email" id="email" placeholder="Email" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                            <input type="text" id="phone" placeholder="Phone" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                            <input type="text" id="company" placeholder="Company" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                            <textarea id="address" placeholder="Address" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
-                        </div>
-                        <button id="saveBtn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-blue-700 transition flex justify-center items-center">
-                            <span>Save Card</span>
-                        </button>
+                        <input type="text" id="name" placeholder="Name" class="w-full bg-slate-50 border rounded-xl p-3 text-sm">
+                        <input type="email" id="email" placeholder="Email" class="w-full bg-slate-50 border rounded-xl p-3 text-sm">
+                        <input type="text" id="phone" placeholder="Phone" class="w-full bg-slate-50 border rounded-xl p-3 text-sm">
+                        <input type="text" id="company" placeholder="Company" class="w-full bg-slate-50 border rounded-xl p-3 text-sm">
+                        <textarea id="address" placeholder="Address (supports any symbols/language)" rows="3" class="w-full bg-slate-50 border rounded-xl p-3 text-sm"></textarea>
+                        <button id="saveBtn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold flex justify-center">Save Contact</button>
                     </div>
                 </div>
             </div>
 
             <div class="lg:col-span-8">
-                <input type="text" id="searchInput" placeholder="Search by name, email, or company..." class="w-full bg-white border border-slate-200 rounded-full px-6 py-3 mb-6 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="text" id="searchInput" placeholder="Search..." class="w-full bg-white border border-slate-200 rounded-full px-6 py-4 mb-6 shadow-sm">
                 <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
         </div>
     </div>
 
-    <div id="cardModal" class="fixed inset-0 z-50 bg-slate-900/80 hidden flex items-center justify-center p-4" onclick="if(event.target == this) closeModal()">
+    <div id="cardModal" class="fixed inset-0 z-50 bg-slate-900/90 hidden flex items-center justify-center p-4" onclick="if(event.target == this) closeModal()">
         <div class="bg-white w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl relative flex flex-col md:flex-row">
-            <button onclick="closeModal()" class="absolute top-4 right-4 bg-slate-100 w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200 transition">✕</button>
-            <div class="md:w-1/2 bg-slate-50 p-6 flex items-center justify-center border-r border-slate-100">
-                <img id="modalImg" class="max-w-full rounded-xl shadow-lg" src="">
+            <button onclick="closeModal()" class="absolute top-4 right-4 bg-slate-100 w-10 h-10 rounded-full">✕</button>
+            <div class="md:w-1/2 bg-slate-50 p-6 flex items-center justify-center">
+                <img id="modalImg" class="max-w-full rounded-2xl shadow-xl">
             </div>
-            <div class="md:w-1/2 p-8 flex flex-col justify-center">
-                <span id="modalCompany" class="text-blue-600 font-bold text-[10px] uppercase tracking-[0.2em] mb-1"></span>
-                <h2 id="modalName" class="text-2xl font-black text-slate-900 mb-6"></h2>
-                <div class="space-y-3 text-sm text-slate-600">
-                    <p class="flex items-center gap-2">📧 <span id="modalEmail"></span></p>
-                    <p class="flex items-center gap-2">📞 <a id="modalPhoneLink" class="font-bold text-slate-900 underline hover:text-blue-600 transition"><span id="modalPhone"></span></a></p>
-                    <p class="flex items-start gap-2">📍 <span id="modalAddress"></span></p>
+            <div class="md:w-1/2 p-10 flex flex-col justify-center">
+                <span id="modalCompany" class="text-blue-600 font-black text-xs uppercase tracking-widest mb-2"></span>
+                <h2 id="modalName" class="text-3xl font-black text-slate-900 mb-6"></h2>
+                <div class="space-y-4 text-sm text-slate-600 font-medium">
+                    <p>📧 <span id="modalEmail"></span></p>
+                    <p>📞 <a id="modalPhoneLink" class="font-bold text-slate-900 underline"><span id="modalPhone"></span></a></p>
+                    <p>📍 <span id="modalAddress"></span></p>
                 </div>
-                <button id="vCardBtn" class="mt-8 bg-emerald-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-emerald-700 transition shadow-lg shadow-emerald-100">Download Contact</button>
-                <div class="mt-4 pt-4 border-t border-slate-100 flex gap-2">
-                    <button id="modalEditBtn" class="flex-1 bg-slate-100 py-2 rounded-lg font-bold text-xs hover:bg-slate-200 transition">Edit</button>
-                    <button id="modalDeleteBtn" class="flex-1 bg-red-50 text-red-600 py-2 rounded-lg font-bold text-xs hover:bg-red-100 transition">Delete</button>
+                <button onclick="downloadVCardFromModal()" class="mt-8 bg-emerald-600 text-white py-4 rounded-2xl font-bold">Add to Contacts</button>
+                <div class="mt-6 pt-6 border-t flex gap-3">
+                    <button id="modalEditBtn" class="flex-1 bg-slate-100 py-3 rounded-xl font-bold text-xs">Edit</button>
+                    <button id="modalDeleteBtn" class="flex-1 bg-red-50 text-red-600 py-3 rounded-xl font-bold text-xs">Delete</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const API_URL = 'https://script.google.com/macros/s/AKfycbz8X05EtY9sEDFCkarTu_-nIbrKR2nsXAoqzSOsK3OnN_2lB8psh59-MG0ymdsYC6mpXw/exec';
+        const API_URL = 'PAShttps://script.google.com/macros/s/AKfycbz8X05EtY9sEDFCkarTu_-nIbrKR2nsXAoqzSOsK3OnN_2lB8psh59-MG0ymdsYC6mpXw/exec';
         let allRows = [];
         let selectedFile = null;
 
-        // --- UI Utilities ---
-        function setBtnLoading(btnId, isLoading, originalText) {
-            const btn = document.getElementById(btnId);
-            if (isLoading) {
-                btn.disabled = true;
-                btn.innerHTML = `<div class="spinner"></div><span>Working...</span>`;
-            } else {
-                btn.disabled = false;
-                btn.innerHTML = `<span>${originalText}</span>`;
-            }
+        function setBtnLoading(id, isLoading, text) {
+            const btn = document.getElementById(id);
+            btn.disabled = isLoading;
+            btn.innerHTML = isLoading ? '<div class="spinner"></div>' : text;
         }
 
-        // --- AUTH ---
         async function handleLogin() {
-            const userBox = document.getElementById('loginUser');
-            const passBox = document.getElementById('loginPass');
-            const errorMsg = document.getElementById('loginError');
-
-            setBtnLoading('loginBtn', true, 'Login');
-
-            try {
-                const res = await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ 
-                        action: 'VERIFY_LOGIN', 
-                        username: userBox.value, 
-                        password: passBox.value 
-                    })
-                });
-                const data = await res.json();
-                if (data.status === 'success') {
-                    sessionStorage.setItem('isLoggedIn', 'true');
-                    showDashboard();
-                } else {
-                    errorMsg.classList.remove('hidden');
-                    setBtnLoading('loginBtn', false, 'Login');
-                }
-            } catch (err) {
-                console.error(err);
-                alert("Connection failed. Verify API URL and Deployment.");
-                setBtnLoading('loginBtn', false, 'Login');
-            }
+            setBtnLoading('loginBtn', true, '');
+            const user = document.getElementById('loginUser').value;
+            const pass = document.getElementById('loginPass').value;
+            const res = await fetch(API_URL, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'VERIFY_LOGIN', username: user, password: pass }) 
+            });
+            const data = await res.json();
+            if (data.status === 'success') { sessionStorage.setItem('isLoggedIn', 'true'); showDashboard(); }
+            else { document.getElementById('loginError').classList.remove('hidden'); setBtnLoading('loginBtn', false, 'Login'); }
         }
 
         function showDashboard() {
@@ -181,28 +115,11 @@
 
         function logout() { sessionStorage.removeItem('isLoggedIn'); location.reload(); }
 
-        window.onload = () => { if (sessionStorage.getItem('isLoggedIn') === 'true') showDashboard(); };
-
-        // --- DATA ---
         async function loadCards() {
-            try {
-                const res = await fetch(API_URL);
-                const json = await res.json();
-                if (json.data) {
-                    allRows = json.data.slice(1);
-                    updateStats(allRows);
-                    renderCards(allRows);
-                }
-            } catch (err) { console.error("Load error:", err); }
-        }
-
-        function updateStats(rows) {
-            document.getElementById('statTotal').textContent = rows.length;
-            const comps = new Set(rows.map(r => r[4]).filter(c => c));
-            document.getElementById('statCompanies').textContent = comps.size;
-            if (rows.length > 0 && rows[rows.length-1][7]) {
-                document.getElementById('statDate').textContent = new Date(rows[rows.length-1][7]).toLocaleDateString();
-            }
+            const res = await fetch(API_URL);
+            const json = await res.json();
+            allRows = json.data.slice(1);
+            renderCards(allRows);
         }
 
         function renderCards(rows) {
@@ -210,30 +127,24 @@
             container.innerHTML = '';
             rows.forEach(row => {
                 const div = document.createElement('div');
-                div.className = 'glass-card p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:shadow-md transition';
+                div.className = 'bg-white p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:shadow-lg transition border border-slate-100';
                 div.onclick = () => openModal(row);
-                div.innerHTML = `<img src="${row[6] || ''}" class="w-12 h-12 object-cover rounded-lg bg-slate-100" onerror="this.src='https://via.placeholder.com/100'">
-                    <div class="overflow-hidden">
-                        <h3 class="font-bold truncate text-slate-800">${row[1] || 'Unnamed'}</h3>
-                        <p class="text-[10px] font-bold text-blue-600 uppercase tracking-tight truncate">${row[4] || 'Individual'}</p>
-                    </div>`;
+                div.innerHTML = `<img src="${row[6]}" class="w-14 h-14 object-cover rounded-xl bg-slate-50" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(row[1])}'">
+                    <div class="overflow-hidden"><h3 class="font-bold truncate">${row[1] || 'No Name'}</h3><p class="text-[10px] font-bold text-blue-600 uppercase truncate">${row[4] || ''}</p></div>`;
                 container.appendChild(div);
             });
         }
 
         function openModal(row) {
             const [id, name, email, phone, company, address, imageUrl] = row;
-            const safePhone = String(phone || ""); // CRITICAL FIX for .replace error
-            
-            document.getElementById('modalImg').src = imageUrl || 'https://via.placeholder.com/300x150?text=Card+Image';
-            document.getElementById('modalName').textContent = name || 'Unknown';
+            const safePhone = String(phone || "");
+            document.getElementById('modalImg').src = imageUrl;
+            document.getElementById('modalName').textContent = name || '---';
             document.getElementById('modalCompany').textContent = company || 'Individual';
-            document.getElementById('modalEmail').textContent = email || 'N/A';
-            document.getElementById('modalPhone').textContent = safePhone || 'N/A';
+            document.getElementById('modalEmail').textContent = email || '---';
+            document.getElementById('modalPhone').textContent = safePhone || '---';
             document.getElementById('modalPhoneLink').href = safePhone ? `tel:${safePhone.replace(/[^+\d]/g, '')}` : '#';
-            document.getElementById('modalAddress').textContent = address || 'N/A';
-            
-            document.getElementById('vCardBtn').onclick = () => downloadVCard(name, safePhone, email, company, address);
+            document.getElementById('modalAddress').textContent = address || '---';
             document.getElementById('modalEditBtn').onclick = () => { closeModal(); editCard(id); };
             document.getElementById('modalDeleteBtn').onclick = () => { closeModal(); deleteCard(id); };
             document.getElementById('cardModal').classList.remove('hidden');
@@ -241,18 +152,21 @@
 
         function closeModal() { document.getElementById('cardModal').classList.add('hidden'); }
 
-        function downloadVCard(n, p, e, c, a) {
+        function downloadVCardFromModal() {
+            const n = document.getElementById('modalName').textContent;
+            const p = document.getElementById('modalPhone').textContent;
+            const e = document.getElementById('modalEmail').textContent;
+            const c = document.getElementById('modalCompany').textContent;
+            const a = document.getElementById('modalAddress').textContent;
             const v = `BEGIN:VCARD\nVERSION:3.0\nFN:${n}\nORG:${c}\nTEL:${p}\nEMAIL:${e}\nADR:;;${a}\nEND:VCARD`;
-            const b = new Blob([v], { type: "text/vcard" });
+            const b = new Blob([v], { type: "text/vcard;charset=utf-8" });
             const u = URL.createObjectURL(b);
             const l = document.createElement("a");
-            l.href = u; l.download = `${n || 'contact'}.vcf`; l.click();
+            l.href = u; l.download = `${n}.vcf`; l.click();
         }
 
-        // --- INPUT HANDLING ---
         document.getElementById('imageInput').addEventListener('change', e => {
             selectedFile = e.target.files[0];
-            if (!selectedFile) return;
             const r = new FileReader();
             r.onload = ev => {
                 document.getElementById('preview').src = ev.target.result;
@@ -264,25 +178,20 @@
         });
 
         document.getElementById('extractBtn').addEventListener('click', async () => {
-            if(!selectedFile) return;
-            setBtnLoading('extractBtn', true, 'Extract Text');
-            try {
-                const { data: { text } } = await Tesseract.recognize(selectedFile, 'eng');
-                const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
-                document.getElementById('email').value = text.match(/\S+@\S+\.\S+/)?.[0] || '';
-                document.getElementById('phone').value = text.match(/(\+?\d[\d\s\-]{8,})/)?.[0] || '';
-                document.getElementById('name').value = lines[0] || '';
-                document.getElementById('company').value = lines[1] || '';
-                document.getElementById('address').value = lines.slice(2, 5).join(', ');
-            } catch (err) { console.error(err); }
+            setBtnLoading('extractBtn', true, '');
+            const { data: { text } } = await Tesseract.recognize(selectedFile, 'eng');
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+            document.getElementById('email').value = text.match(/\S+@\S+\.\S+/)?.[0] || '';
+            document.getElementById('phone').value = text.match(/(\+?\d[\d\s\-]{8,})/)?.[0] || '';
+            document.getElementById('name').value = lines[0] || '';
+            document.getElementById('company').value = lines[1] || '';
+            document.getElementById('address').value = lines.slice(2, 6).join(', ');
             setBtnLoading('extractBtn', false, '✨ Extract Text');
         });
 
         document.getElementById('saveBtn').addEventListener('click', async () => {
             const editId = document.getElementById('editId').value;
-            const originalText = editId ? 'Update Changes' : 'Save Card';
-            setBtnLoading('saveBtn', true, originalText);
-
+            setBtnLoading('saveBtn', true, '');
             const payload = {
                 action: editId ? 'UPDATE' : 'CREATE',
                 id: editId || null,
@@ -293,56 +202,46 @@
                 address: document.getElementById('address').value,
                 fileName: selectedFile?.name || 'card.jpg'
             };
-
             const send = async (base64 = null) => {
                 payload.imageBase64 = base64;
-                try {
-                    await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
-                    resetForm(); 
-                    await loadCards();
-                } catch (err) { console.error(err); }
+                await fetch(API_URL, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload) 
+                });
+                resetForm(); loadCards();
                 setBtnLoading('saveBtn', false, 'Save Card');
             };
-
             if (!editId && selectedFile) {
-                const r = new FileReader(); 
-                r.onload = () => send(r.result); 
-                r.readAsDataURL(selectedFile);
+                const r = new FileReader(); r.onload = () => send(r.result); r.readAsDataURL(selectedFile);
             } else { await send(); }
         });
 
         function editCard(id) {
             const row = allRows.find(r => r[0].toString() === id.toString());
-            if(!row) return;
             document.getElementById('editId').value = row[0];
             document.getElementById('name').value = row[1];
             document.getElementById('email').value = row[2];
             document.getElementById('phone').value = row[3];
             document.getElementById('company').value = row[4];
             document.getElementById('address').value = row[5];
-            document.getElementById('saveBtn').innerHTML = '<span>Update Changes</span>';
+            document.getElementById('saveBtn').textContent = 'Update Changes';
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         async function deleteCard(id) {
-            if (confirm('Permanently delete this card?')) {
-                try {
-                    await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'DELETE', id }) });
-                    loadCards();
-                } catch (err) { console.error(err); }
+            if (confirm('Delete Card?')) {
+                await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'DELETE', id }) });
+                loadCards();
             }
         }
 
         function resetForm() {
             document.getElementById('editId').value = '';
-            ['name','email','phone','company','address'].forEach(id => {
-                const el = document.getElementById(id);
-                if(el) el.value = '';
-            });
+            ['name','email','phone','company','address'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('preview').classList.add('hidden');
             document.getElementById('uploadPlaceholder').classList.remove('hidden');
             document.getElementById('extractBtn').classList.add('hidden');
-            document.getElementById('saveBtn').innerHTML = '<span>Save Card</span>';
             selectedFile = null;
         }
 
@@ -350,6 +249,8 @@
             const q = e.target.value.toLowerCase();
             renderCards(allRows.filter(r => r.join(' ').toLowerCase().includes(q)));
         });
+
+        if (sessionStorage.getItem('isLoggedIn') === 'true') showDashboard();
     </script>
 </body>
-</html>
+</html>FURK
