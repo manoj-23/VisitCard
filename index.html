@@ -1,202 +1,273 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Visiting Card Organizer</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardVault | Secure Organizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+        .hidden { display: none !important; }
+        .glass-card { background: white; border: 1px solid #e2e8f0; }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-6">
-  <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-6">
-    <h1 class="text-3xl font-bold text-center mb-6 text-blue-700">📇 Visiting Card Organizer</h1>
+<body>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="border p-4 rounded-xl bg-gray-50 flex flex-col items-center justify-center">
-        <input type="file" id="imageInput" accept="image/*" class="hidden" />
-        <label for="imageInput" class="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 transition">Upload Card Image</label>
-        <img id="preview" class="mt-4 w-64 rounded-xl shadow-md hidden" />
-        <button id="extractBtn" class="mt-4 bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition hidden">Extract Text</button>
-        <p id="ocrStatus" class="text-gray-500 mt-2 text-sm"></p>
-      </div>
-
-      <div class="space-y-3">
-        <input type="hidden" id="editId" />
-        <input type="text" id="name" placeholder="Name" class="w-full border rounded-xl p-2 focus:ring-2 focus:ring-blue-500" />
-        <input type="email" id="email" placeholder="Email" class="w-full border rounded-xl p-2 focus:ring-2 focus:ring-blue-500" />
-        <input type="text" id="phone" placeholder="Phone" class="w-full border rounded-xl p-2 focus:ring-2 focus:ring-blue-500" />
-        <input type="text" id="company" placeholder="Company" class="w-full border rounded-xl p-2 focus:ring-2 focus:ring-blue-500" />
-        <textarea id="address" placeholder="Address" rows="3" class="w-full border rounded-xl p-2 focus:ring-2 focus:ring-blue-500"></textarea>
-
-        <button id="saveBtn" class="w-full bg-blue-700 text-white py-2 rounded-xl hover:bg-blue-800 transition">Save to Google Sheet</button>
-        <p id="uploadStatus" class="text-center text-sm text-gray-600 mt-2"></p>
-      </div>
+    <div id="loginScreen" class="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl text-center">
+            <div class="bg-blue-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">🔐</div>
+            <h2 class="text-2xl font-black text-slate-900 mb-6">Admin Access</h2>
+            <div class="space-y-4 text-left">
+                <input type="text" id="loginUser" placeholder="Username" class="w-full bg-slate-50 border rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="loginPass" placeholder="Password" class="w-full bg-slate-50 border rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500">
+                <button onclick="handleLogin()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition shadow-lg">Login</button>
+                <p id="loginError" class="text-red-500 text-center text-xs font-bold hidden">Invalid username or password!</p>
+            </div>
+        </div>
     </div>
 
-    <hr class="my-6" />
+    <div id="mainDashboard" class="hidden max-w-6xl mx-auto p-4 md:p-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-black">CardVault <span class="text-blue-600">Pro</span></h1>
+            <button onclick="logout()" class="text-slate-400 hover:text-red-500 font-bold text-xs uppercase">Logout ⏻</button>
+        </div>
 
-    <div>
-      <h2 class="text-2xl font-semibold mb-4">Saved Visiting Cards</h2>
-      <div class="flex justify-between mb-3">
-        <input type="text" id="searchInput" placeholder="🔍 Search..." class="border p-2 rounded-xl w-2/3" />
-        <button id="refreshBtn" class="bg-gray-700 text-white px-4 py-2 rounded-xl hover:bg-gray-800">🔄 Refresh</button>
-      </div>
-      <div id="cardsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        <div id="statsBar" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="glass-card p-6 rounded-3xl flex items-center gap-4">
+                <div class="text-2xl">🗂️</div>
+                <div><p class="text-xs font-bold text-slate-400 uppercase">Total</p><p id="statTotal" class="text-2xl font-black">0</p></div>
+            </div>
+            <div class="glass-card p-6 rounded-3xl flex items-center gap-4 border-b-4 border-blue-500">
+                <div class="text-2xl">🏢</div>
+                <div><p class="text-xs font-bold text-slate-400 uppercase">Companies</p><p id="statCompanies" class="text-2xl font-black">0</p></div>
+            </div>
+            <div class="glass-card p-6 rounded-3xl flex items-center gap-4">
+                <div class="text-2xl">📅</div>
+                <div><p class="text-xs font-bold text-slate-400 uppercase">Latest</p><p id="statDate" class="text-lg font-bold text-slate-600">--</p></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-4">
+                <div class="glass-card p-6 rounded-3xl shadow-sm sticky top-8">
+                    <div class="space-y-4">
+                        <div class="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center cursor-pointer" onclick="document.getElementById('imageInput').click()">
+                            <input type="file" id="imageInput" accept="image/*" class="hidden" />
+                            <div id="uploadPlaceholder"><p class="text-xs font-bold text-slate-500">Upload Card</p></div>
+                            <img id="preview" class="hidden w-full h-32 object-contain rounded-lg" />
+                        </div>
+                        <button id="extractBtn" class="hidden w-full bg-blue-50 text-blue-600 py-2 rounded-lg text-xs font-bold">✨ Extract Text</button>
+                        <input type="hidden" id="editId">
+                        <input type="text" id="name" placeholder="Name" class="w-full bg-slate-50 border rounded-lg p-2 text-sm">
+                        <input type="email" id="email" placeholder="Email" class="w-full bg-slate-50 border rounded-lg p-2 text-sm">
+                        <input type="text" id="phone" placeholder="Phone" class="w-full bg-slate-50 border rounded-lg p-2 text-sm">
+                        <input type="text" id="company" placeholder="Company" class="w-full bg-slate-50 border rounded-lg p-2 text-sm">
+                        <textarea id="address" placeholder="Address" rows="2" class="w-full bg-slate-50 border rounded-lg p-2 text-sm"></textarea>
+                        <button id="saveBtn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-md">Save Card</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8">
+                <input type="text" id="searchInput" placeholder="Search..." class="w-full bg-white border border-slate-200 rounded-full px-6 py-3 mb-6 shadow-sm">
+                <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script>
-    // REPLACE THIS WITH YOUR NEW DEPLOYMENT URL
-    const API_URL = 'https://script.google.com/macros/s/AKfycbz8X05EtY9sEDFCkarTu_-nIbrKR2nsXAoqzSOsK3OnN_2lB8psh59-MG0ymdsYC6mpXw/exec';
-    
-    let selectedFile = null;
-    let allRows = [];
+    <div id="cardModal" class="fixed inset-0 z-50 bg-slate-900/80 hidden flex items-center justify-center p-4" onclick="if(event.target == this) closeModal()">
+        <div class="bg-white w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl relative flex flex-col md:flex-row">
+            <button onclick="closeModal()" class="absolute top-4 right-4 bg-slate-100 w-8 h-8 rounded-full">✕</button>
+            <div class="md:w-1/2 bg-slate-50 p-6 flex items-center justify-center">
+                <img id="modalImg" class="max-w-full rounded-xl shadow-lg">
+            </div>
+            <div class="md:w-1/2 p-8 flex flex-col justify-center">
+                <span id="modalCompany" class="text-blue-600 font-bold text-xs uppercase tracking-widest mb-1"></span>
+                <h2 id="modalName" class="text-2xl font-black text-slate-900 mb-6"></h2>
+                <div class="space-y-3 text-sm text-slate-600">
+                    <p>📧 <span id="modalEmail"></span></p>
+                    <p>📞 <a id="modalPhoneLink" class="font-bold text-slate-900 underline"><span id="modalPhone"></span></a></p>
+                    <p>📍 <span id="modalAddress"></span></p>
+                </div>
+                <button id="vCardBtn" class="mt-6 bg-emerald-600 text-white py-3 rounded-xl font-bold text-sm">Download Contact</button>
+                <div class="mt-4 pt-4 border-t flex gap-2">
+                    <button id="modalEditBtn" class="flex-1 bg-slate-100 py-2 rounded-lg font-bold text-xs">Edit</button>
+                    <button id="modalDeleteBtn" class="flex-1 bg-red-50 text-red-600 py-2 rounded-lg font-bold text-xs">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    // --- Selectors ---
-    const imageInput = document.getElementById('imageInput');
-    const preview = document.getElementById('preview');
-    const extractBtn = document.getElementById('extractBtn');
-    const saveBtn = document.getElementById('saveBtn');
-    const uploadStatus = document.getElementById('uploadStatus');
+    <script>
+        const API_URL = 'PASTE_YOUR_NEW_DEPLOYMENT_URL';
+        let allRows = [];
+        let selectedFile = null;
 
-    // --- Image Preview & OCR ---
-    imageInput.addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (file) {
-        selectedFile = file;
-        const reader = new FileReader();
-        reader.onload = ev => {
-          preview.src = ev.target.result;
-          preview.classList.remove('hidden');
-          extractBtn.classList.remove('hidden');
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    extractBtn.addEventListener('click', async () => {
-      document.getElementById('ocrStatus').textContent = 'Extracting...';
-      const { data: { text } } = await Tesseract.recognize(selectedFile, 'eng');
-      document.getElementById('ocrStatus').textContent = 'Done!';
-      
-      const lines = text.split('\n').filter(l => l.trim() !== '');
-      document.getElementById('name').value = lines[0] || '';
-      document.getElementById('email').value = text.match(/\S+@\S+\.\S+/)?.[0] || '';
-      document.getElementById('phone').value = text.match(/(\+?\d[\d\s\-]{7,15})/)?.[0] || '';
-    });
-
-    // --- Create / Update ---
-    saveBtn.addEventListener('click', async () => {
-      const editId = document.getElementById('editId').value;
-      const action = editId ? 'UPDATE' : 'CREATE';
-      
-      uploadStatus.textContent = 'Processing... ⏳';
-
-      const sendRequest = async (base64Data = null) => {
-        const payload = {
-          action: action,
-          id: editId || null,
-          name: document.getElementById('name').value,
-          email: document.getElementById('email').value,
-          phone: document.getElementById('phone').value,
-          company: document.getElementById('company').value,
-          address: document.getElementById('address').value,
-          imageBase64: base64Data,
-          fileName: selectedFile ? selectedFile.name : null
-        };
-
-        try {
-          // POST to bypass CORS issues with PUT/DELETE
-          const res = await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-          });
-          const data = await res.json();
-          uploadStatus.textContent = '✅ Action successful!';
-          resetForm();
-          loadCards();
-        } catch (err) {
-          uploadStatus.textContent = '❌ Error: ' + err.message;
+        // AUTH
+        async function handleLogin() {
+            const username = document.getElementById('loginUser').value;
+            const password = document.getElementById('loginPass').value;
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'VERIFY_LOGIN', username, password })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                sessionStorage.setItem('isLoggedIn', 'true');
+                showDashboard();
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
         }
-      };
 
-      if (selectedFile && action === 'CREATE') {
-        const reader = new FileReader();
-        reader.onload = e => sendRequest(e.target.result);
-        reader.readAsDataURL(selectedFile);
-      } else {
-        sendRequest();
-      }
-    });
+        function showDashboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainDashboard').classList.remove('hidden');
+            loadCards();
+        }
 
-    // --- Data Loading ---
-    async function loadCards() {
-      const container = document.getElementById('cardsContainer');
-      container.innerHTML = 'Loading...';
-      const res = await fetch(API_URL);
-      const json = await res.json();
-      allRows = json.data.slice(1); 
-      displayCards(allRows);
-    }
+        function logout() { sessionStorage.removeItem('isLoggedIn'); location.reload(); }
 
-    function displayCards(rows) {
-      const container = document.getElementById('cardsContainer');
-      container.innerHTML = '';
-      rows.forEach(row => {
-        const [id, name, email, phone, company, address, imageUrl] = row;
-        const div = document.createElement('div');
-        div.className = 'p-4 border rounded-xl bg-white shadow flex flex-col';
-        div.innerHTML = `
-          <img src="${imageUrl}" class="h-32 w-full object-cover rounded mb-2">
-          <h3 class="font-bold">${name}</h3>
-          <p class="text-xs text-gray-500">${company}</p>
-          <p class="text-sm">${phone}</p>
-          <div class="flex gap-2 mt-4">
-            <button onclick="editCard('${id}')" class="bg-yellow-500 text-white text-xs px-2 py-1 rounded">Edit</button>
-            <button onclick="deleteCard('${id}')" class="bg-red-500 text-white text-xs px-2 py-1 rounded">Delete</button>
-          </div>
-        `;
-        container.appendChild(div);
-      });
-    }
+        window.onload = () => { if (sessionStorage.getItem('isLoggedIn') === 'true') showDashboard(); };
 
-    // --- Delete ---
-    async function deleteCard(id) {
-      if (!confirm('Are you sure?')) return;
-      await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'DELETE', id: id })
-      });
-      loadCards();
-    }
+        // DATA LOADING
+        async function loadCards() {
+            const res = await fetch(API_URL);
+            const json = await res.json();
+            allRows = json.data.slice(1);
+            updateStats(allRows);
+            renderCards(allRows);
+        }
 
-    // --- Edit Mode ---
-    function editCard(id) {
-      const row = allRows.find(r => r[0].toString() === id.toString());
-      if (row) {
-        document.getElementById('editId').value = row[0];
-        document.getElementById('name').value = row[1];
-        document.getElementById('email').value = row[2];
-        document.getElementById('phone').value = row[3];
-        document.getElementById('company').value = row[4];
-        document.getElementById('address').value = row[5];
-        saveBtn.textContent = 'Update Card Details';
-        saveBtn.classList.replace('bg-blue-700', 'bg-yellow-600');
-        window.scrollTo(0, 0);
-      }
-    }
+        function updateStats(rows) {
+            document.getElementById('statTotal').textContent = rows.length;
+            const comps = new Set(rows.map(r => r[4]).filter(c => c));
+            document.getElementById('statCompanies').textContent = comps.size;
+            if (rows.length) document.getElementById('statDate').textContent = new Date(rows[rows.length-1][7]).toLocaleDateString();
+        }
 
-    function resetForm() {
-      document.getElementById('editId').value = '';
-      ['name', 'email', 'phone', 'company', 'address'].forEach(id => document.getElementById(id).value = '');
-      preview.classList.add('hidden');
-      selectedFile = null;
-      saveBtn.textContent = 'Save to Google Sheet';
-      saveBtn.classList.replace('bg-yellow-600', 'bg-blue-700');
-    }
+        function renderCards(rows) {
+            const container = document.getElementById('cardsContainer');
+            container.innerHTML = '';
+            rows.forEach(row => {
+                const div = document.createElement('div');
+                div.className = 'glass-card p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:shadow-md transition';
+                div.onclick = () => openModal(row);
+                div.innerHTML = `<img src="${row[6]}" class="w-12 h-12 object-cover rounded-lg bg-slate-100">
+                    <div class="overflow-hidden"><h3 class="font-bold truncate">${row[1] || 'Unnamed'}</h3><p class="text-[10px] font-bold text-blue-600 uppercase truncate">${row[4] || ''}</p></div>`;
+                container.appendChild(div);
+            });
+        }
 
-    document.getElementById('refreshBtn').addEventListener('click', loadCards);
-    loadCards();
-  </script>
+        function openModal(row) {
+            const [id, name, email, phone, company, address, imageUrl] = row;
+            document.getElementById('modalImg').src = imageUrl;
+            document.getElementById('modalName').textContent = name;
+            document.getElementById('modalCompany').textContent = company;
+            document.getElementById('modalEmail').textContent = email;
+            document.getElementById('modalPhone').textContent = phone;
+            document.getElementById('modalPhoneLink').href = `tel:${phone.replace(/[^+\d]/g, '')}`;
+            document.getElementById('modalAddress').textContent = address;
+            document.getElementById('vCardBtn').onclick = () => downloadVCard(name, phone, email, company, address);
+            document.getElementById('modalEditBtn').onclick = () => { closeModal(); editCard(id); };
+            document.getElementById('modalDeleteBtn').onclick = () => { closeModal(); deleteCard(id); };
+            document.getElementById('cardModal').classList.remove('hidden');
+        }
+
+        function closeModal() { document.getElementById('cardModal').classList.add('hidden'); }
+
+        // VCARD
+        function downloadVCard(n, p, e, c, a) {
+            const v = `BEGIN:VCARD\nVERSION:3.0\nFN:${n}\nORG:${c}\nTEL:${p}\nEMAIL:${e}\nADR:;;${a}\nEND:VCARD`;
+            const b = new Blob([v], { type: "text/vcard" });
+            const u = URL.createObjectURL(b);
+            const l = document.createElement("a");
+            l.href = u; l.download = `${n}.vcf`; l.click();
+        }
+
+        // IMAGE & OCR
+        document.getElementById('imageInput').addEventListener('change', e => {
+            selectedFile = e.target.files[0];
+            const r = new FileReader();
+            r.onload = ev => {
+                document.getElementById('preview').src = ev.target.result;
+                document.getElementById('preview').classList.remove('hidden');
+                document.getElementById('uploadPlaceholder').classList.add('hidden');
+                document.getElementById('extractBtn').classList.remove('hidden');
+            };
+            r.readAsDataURL(selectedFile);
+        });
+
+        document.getElementById('extractBtn').addEventListener('click', async () => {
+            const { data: { text } } = await Tesseract.recognize(selectedFile, 'eng');
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+            document.getElementById('email').value = text.match(/\S+@\S+\.\S+/)?.[0] || '';
+            document.getElementById('phone').value = text.match(/(\+?\d[\d\s\-]{8,})/)?.[0] || '';
+            document.getElementById('name').value = lines[0] || '';
+            document.getElementById('company').value = lines[1] || '';
+            document.getElementById('address').value = lines.slice(2, 5).join(', ');
+        });
+
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            const editId = document.getElementById('editId').value;
+            const payload = {
+                action: editId ? 'UPDATE' : 'CREATE',
+                id: editId || null,
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                company: document.getElementById('company').value,
+                address: document.getElementById('address').value,
+                fileName: selectedFile?.name || 'card.jpg'
+            };
+
+            const send = async (base64 = null) => {
+                payload.imageBase64 = base64;
+                await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+                resetForm(); loadCards();
+            };
+
+            if (!editId && selectedFile) {
+                const r = new FileReader(); r.onload = () => send(r.result); r.readAsDataURL(selectedFile);
+            } else { await send(); }
+        });
+
+        function editCard(id) {
+            const row = allRows.find(r => r[0].toString() === id.toString());
+            document.getElementById('editId').value = row[0];
+            document.getElementById('name').value = row[1];
+            document.getElementById('email').value = row[2];
+            document.getElementById('phone').value = row[3];
+            document.getElementById('company').value = row[4];
+            document.getElementById('address').value = row[5];
+            document.getElementById('saveBtn').textContent = 'Update Changes';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function deleteCard(id) {
+            if (confirm('Delete?')) {
+                await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'DELETE', id }) });
+                loadCards();
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('editId').value = '';
+            ['name','email','phone','company','address'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('preview').classList.add('hidden');
+            document.getElementById('uploadPlaceholder').classList.remove('hidden');
+            document.getElementById('saveBtn').textContent = 'Save Card';
+            selectedFile = null;
+        }
+
+        document.getElementById('searchInput').addEventListener('input', e => {
+            const q = e.target.value.toLowerCase();
+            renderCards(allRows.filter(r => r.join(' ').toLowerCase().includes(q)));
+        });
+
+        loadCards();
+    </script>
 </body>
 </html>
