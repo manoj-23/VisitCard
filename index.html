@@ -112,17 +112,29 @@
 
         function getRenderableImageUrl(rawUrl) {
             if (!rawUrl) return '';
-            const imageUrl = String(rawUrl).trim();
+            let imageUrl = String(rawUrl).trim();
             if (!imageUrl) return '';
 
-            // Convert common Google Drive share links into direct image URLs.
-            const fileMatch = imageUrl.match(/drive\.google\.com\/file\/d\/([^/]+)/i);
-            if (fileMatch?.[1]) return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
+            // Handle Google Sheets formula values like =IMAGE("https://...")
+            const formulaMatch = imageUrl.match(/^=\s*image\(\s*["']([^"']+)["']/i);
+            if (formulaMatch?.[1]) imageUrl = formulaMatch[1].trim();
 
-            const openMatch = imageUrl.match(/[?&]id=([^&]+)/i);
-            if (/drive\.google\.com\/open/i.test(imageUrl) && openMatch?.[1]) {
-                return `https://drive.google.com/uc?export=view&id=${openMatch[1]}`;
-            }
+            // Unwrap accidental surrounding quotes.
+            imageUrl = imageUrl.replace(/^['"]|['"]$/g, '').trim();
+
+            // Already embeddable Google content URL.
+            if (/^https:\/\/lh3\.googleusercontent\.com\//i.test(imageUrl)) return imageUrl;
+
+            // Convert common Google Drive link formats to a thumbnail endpoint suitable for <img src>.
+            const fileMatch = imageUrl.match(/drive\.google\.com\/file\/d\/([^/?]+)/i);
+            const openMatch = imageUrl.match(/drive\.google\.com\/open\?[^#]*[?&]id=([^&]+)/i);
+            const ucMatch = imageUrl.match(/drive\.google\.com\/uc\?[^#]*[?&]id=([^&]+)/i);
+            const dParamMatch = imageUrl.match(/[?&]d=([^&]+)/i);
+
+            const fileId = fileMatch?.[1] || openMatch?.[1] || ucMatch?.[1] || dParamMatch?.[1] ||
+                (/^[a-zA-Z0-9_-]{20,}$/.test(imageUrl) ? imageUrl : '');
+
+            if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1200`;
 
             return imageUrl;
         }
